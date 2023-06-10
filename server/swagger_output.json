@@ -1,0 +1,279 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "3DVerse Challenge API",
+    "description": "By: Farhan H"
+  },
+  "host": "localhost:3333",
+  "basePath": "/",
+  "schemes": ["http"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "paths": {
+    "/v1/file/upload-file": {
+      "post": {
+        "tags": ["Files"],
+        "description": "Upload a new file to the server",
+        "summary": "Upload a new file to the server",
+        "consumes": ["multipart/form-data"],
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "name": "file",
+            "in": "formData",
+            "description": "File to upload",
+            "required": true,
+            "type": "file"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "UUID of the file"
+                },
+                "original_name": {
+                  "type": "string",
+                  "description": "Original name of the file"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name of the file"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Path of the file"
+                },
+                "size": {
+                  "type": "number",
+                  "description": "Size of the file"
+                },
+                "creation_date": {
+                  "type": "string",
+                  "description": "Creation date of the file"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input / Error while uploading"
+          }
+        }
+      }
+    },
+    "/v1/file/list": {
+      "get": {
+        "tags": ["Files"],
+        "description": "List all files currently saved on the server",
+        "produces": ["application/json"],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/FileData"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error while listing files"
+          }
+        }
+      }
+    },
+    "/v1/file/rename-file": {
+      "put": {
+        "tags": ["Files"],
+        "description": "Rename a file on the server",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "required": true,
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "New name and file id",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RenameRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/FileData"
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "File not found"
+          },
+          "500": {
+            "description": "Server error while renaming file"
+          }
+        }
+      }
+    },
+    "/v1/file/download/{fileId}": {
+      "get": {
+        "tags": ["Files"],
+        "description": "Download a file by fileId",
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "ID of the file to download"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File downloaded successfully",
+            "schema": {
+              "type": "file"
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "File not found"
+          },
+          "500": {
+            "description": "Error while downloading file"
+          }
+        }
+      }
+    },
+    "/v1/file/delete/{fileId}": {
+      "delete": {
+        "tags": ["Files"],
+        "description": "Deletes a file on the server by fileId",
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "ID of the file to delete"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File deleted successfully"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "File not found"
+          },
+          "500": {
+            "description": "Error while deleting file"
+          }
+        }
+      }
+    },
+    "/v1/file/transform/{fileId}": {
+      "get": {
+        "tags": ["Files"],
+        "description": "Transform & Download. Transforms vertices in the file with a given scale & translation vector ",
+        "produces": ["application/octet-stream"],
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scale",
+            "in": "query",
+            "type": "string",
+            "description": "Scale vector to transform file (format: '{\"x\":val1,\"y\":val2,\"z\":val3}')"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "type": "string",
+            "description": "Offset vector to transform file (format: '{\"x\":val1,\"y\":val2,\"z\":val3}')"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File transformed and downloaded successfully",
+            "schema": {
+              "type": "file"
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "File not found"
+          },
+          "500": {
+            "description": "Error while transforming file"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "FileData": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "UUID of the file"
+        },
+        "original_name": {
+          "type": "string",
+          "description": "Original name of the file"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the file"
+        },
+        "path": {
+          "type": "string",
+          "description": "Path of the file"
+        },
+        "size": {
+          "type": "number",
+          "description": "Size of the file"
+        },
+        "creation_date": {
+          "type": "string",
+          "description": "Creation date of the file"
+        }
+      }
+    },
+    "RenameRequest": {
+      "type": "object",
+      "properties": {
+        "newName": {
+          "type": "string",
+          "description": "New name for the file"
+        },
+        "fileId": {
+          "type": "string",
+          "description": "ID of the file to rename"
+        }
+      },
+      "required": ["newName", "fileId"]
+    }
+  }
+}

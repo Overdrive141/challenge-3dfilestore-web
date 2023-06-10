@@ -64,6 +64,7 @@ export const listFiles = async (req: Request, res: Response) => {
   }
 };
 
+// TODO: Use preserve extension utility to preserve extension of the file
 export const renameFile = async (req: RenameRequest, res: Response, next: express.NextFunction) => {
   const { newName, fileId } = req.body;
 

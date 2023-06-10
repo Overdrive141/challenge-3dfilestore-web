@@ -36,8 +36,6 @@ if (!isMainThread) {
     if (line.startsWith('v ')) {
       // check if line is a vertex
       // apply transformation
-      // check if parent port => sends to the parent / main thread
-      // if parentPort then  parentPort.postMessage('v ' + transformed_vertex.join(' ') + '\n');
       // const vertex: Vector3 = {x: pa}
       // filter out the "v " => split into array => filter out array to remove empty strings => parse to ints
       const vertex: number[] = line.slice(2).split(' ').filter(Boolean).map(Number);
