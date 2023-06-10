@@ -50,4 +50,4 @@ next-env.d.ts
 # Server gitignore
 server/node_modules
 server/dist
-server/uploads
+server/uploads/*
