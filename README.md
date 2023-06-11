@@ -1,3 +1,37 @@
+# 3DVerse Server Information
+
+This portion of the documentation explains the features of the server that has been implemented to complete the challenge.
+
+## How to Run?
+
+1. Clone the repository:
+   ```
+   git clone <repository-url>
+   ```
+2. Navigate into the server directory and install dependencies:
+   ```sh
+   cd server
+   npm install
+   ```
+3. Start the server:
+   ```sh
+   npm run start
+   ```
+4. Open a separate terminal to start the frontend inside root folder:
+   ```
+   npm run start:w
+   ```
+
+## Information
+
+- The default port for the server has been set to `3333`
+- The API docs can be accessed at `http://localhost:3333/docs`. Direct Link: [Docs](http://localhost:3333/docs)
+- **Worker Threads**: Node Worker Threads have been implemented to handle the transform & download feature. This will enable the main thread not to be blocked and keep processing other requests as they come in.
+- **File System**: No database is being used. Everything is being done on the filesystem using Node's 'fs' module.
+- **Metadata Management**: Metadata related to files are being saved in a json file inside `uploads` folder
+
+---
+
 # Challenge 3dfilestore Web
 
 In this challenge, you will design the REST API and implement the backend features of a 3D file repository web application. The frontend of the web application is provided.
