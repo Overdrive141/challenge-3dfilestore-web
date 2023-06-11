@@ -12,7 +12,10 @@ import {
   TransformRequest,
   Vector3,
 } from '../utils/types';
-import { constructFileNameOnUpload, readFileData, writeFileData } from '../utils';
+import { checkFileExists, constructFileNameOnUpload, fileCleanup, readFileData, writeFileData } from '../utils';
+import { access } from 'fs/promises';
+
+//-----------------------------------------------------------------------------
 
 // TODO: Handle race conditions for updating files.json metadata when
 //       multiple clients upload file, rename file or delete file.
@@ -54,6 +57,8 @@ export const uploadFile = async (req: Request, res: Response, next: express.Next
   }
 };
 
+//-----------------------------------------------------------------------------
+
 export const listFiles = async (req: Request, res: Response) => {
   try {
     const fileData: FileData[] = await readFileData();
@@ -63,6 +68,8 @@ export const listFiles = async (req: Request, res: Response) => {
     res.status(500).json({ error: `Error listing files: ${err}` });
   }
 };
+
+//-----------------------------------------------------------------------------
 
 // TODO: Use preserve extension utility to preserve extension of the file
 export const renameFile = async (req: RenameRequest, res: Response, next: express.NextFunction) => {
@@ -93,6 +100,8 @@ export const renameFile = async (req: RenameRequest, res: Response, next: expres
   }
 };
 
+//-----------------------------------------------------------------------------
+
 export const downloadFile = async (req: DownloadRequest, res: Response, next: express.NextFunction) => {
   const { fileId } = req.params;
 
@@ -109,22 +118,55 @@ export const downloadFile = async (req: DownloadRequest, res: Response, next: ex
       return res.status(404).json({ error: 'File not found' });
     }
 
-    const filePath = file.path;
-    const fileName = file.name;
+    const { path: filePath, name: fileName } = file;
 
-    // does file exist on disk
-    if (!fs.existsSync(filePath)) {
+    // Checks if file exists on disk or not (async)
+    try {
+      await checkFileExists(filePath);
+    } catch (err) {
+      console.error(`File not found: ${err}`);
       return res.status(404).json({ error: 'File not found' });
     }
 
     res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
     const readStream = fs.createReadStream(filePath);
+
+    //////////////////// Cleanup Code ///////////////////
+
+    // if readstream encounters an error
+    readStream.on('error', readErr => {
+      console.error(`Error reading file: ${readErr}`);
+      fileCleanup(readStream);
+      // client will get error response from standard catch block. Customized handling can be done here
+    });
+
+    res.on('error', resErr => {
+      console.error(`Error while writing to client: ${resErr}`);
+      fileCleanup(readStream);
+    });
+
+    req.on('error', reqErr => {
+      console.error(`Request error by client, possibly due to network issues: ${reqErr}`);
+      fileCleanup(readStream);
+    });
+
+    // client abort connection, browser, stop download
+    req.on('abort', reqErr => {
+      console.error(`Request aborted by client: ${reqErr}`);
+      fileCleanup(readStream);
+    });
+
+    /////////////////////////////////////////////////////
+
     readStream.pipe(res);
   } catch (err) {
     console.error('ERROR Downloading File', err);
+    // TODO: Check if a response header hasnt been sent already
     return res.status(500).json({ error: `Error while downloading file: ${err}` });
   }
 };
+
+//-----------------------------------------------------------------------------
 
 // TODO: Change this route later to be able to restore files
 // method will become a PUT request and metadata JSON will have an isDeleted flag
@@ -147,8 +189,11 @@ export const deleteFile = async (req: DeleteRequest, res: Response, next: expres
 
     const filePath = files[fileIndex].path;
 
-    // does file exist
-    if (!fs.existsSync(filePath)) {
+    // Checks if file exists on disk or not (async)
+    try {
+      await checkFileExists(filePath);
+    } catch (err) {
+      console.error(`File not found: ${err}`);
       return res.status(404).json({ error: 'File not found' });
     }
 
@@ -172,6 +217,7 @@ export const deleteFile = async (req: DeleteRequest, res: Response, next: expres
   }
 };
 
+//-----------------------------------------------------------------------------
 export const transformFile = async (req: TransformRequest, res: Response, next: express.NextFunction) => {
   const { fileId } = req.params;
 

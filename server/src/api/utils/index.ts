@@ -1,4 +1,5 @@
-import { readFile, writeFile } from 'fs/promises';
+import { access, readFile, writeFile } from 'fs/promises';
+import fs from 'fs';
 import path from 'path';
 import { uploadDir } from '../../config/vars';
 import { FileData } from './types';
@@ -30,10 +31,6 @@ export const constructFileNameOnUpload = (files: FileData[], newFileName: string
   return `${newFileBaseName}(${fileCounts[newFileName] + 1}).${newFileExtension}`;
 };
 
-export const preserveExtension = (fileName: string): void => {
-  // TODO: Handle extension preservation on rename
-};
-
 // function to read file metadata
 export const readFileData = async (): Promise<FileData[]> => {
   const rawData: string = await readFile(path.join(uploadDir, 'files.json'), 'utf8');
@@ -44,4 +41,29 @@ export const readFileData = async (): Promise<FileData[]> => {
 // function to write file metadata
 export const writeFileData = async (fileData: FileData[]): Promise<void> => {
   await writeFile(path.join(uploadDir, 'files.json'), JSON.stringify(fileData, null, 2), 'utf-8');
+};
+
+// memory cleanup
+export const fileCleanup = (readStream: fs.ReadStream): void => {
+  // Cleaning up readStream & all listeners if still reading/readable
+  if (!readStream.destroyed) {
+    readStream.removeAllListeners();
+    readStream.destroy();
+  }
+};
+
+// does file exists on disk
+export const checkFileExists = async (filePath: string): Promise<void> => {
+  try {
+    // TODO: Check for read access
+    await access(filePath, fs.constants.F_OK);
+  } catch (err) {
+    throw new Error('File not found');
+  }
+};
+
+///////////////////////////////////////////
+
+export const preserveExtension = (fileName: string): void => {
+  // TODO: Handle extension preservation on rename
 };
