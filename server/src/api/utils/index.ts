@@ -77,6 +77,14 @@ export const workerCleanup = (worker?: Worker) => {
 
 //-----------------------------------------------------------------------------
 
+export const parseJSONOrDefault = (jsonString: string | undefined, defaultValue: any) => {
+  try {
+    return jsonString ? JSON.parse(jsonString) : defaultValue;
+  } catch (error) {
+    throw new Error(`Unable to parse JSON: ${error}`);
+  }
+};
+
 export const preserveExtension = (fileName: string): void => {
   // TODO: Handle extension preservation on rename
 };

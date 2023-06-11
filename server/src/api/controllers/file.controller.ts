@@ -3,24 +3,16 @@ import fs from 'fs';
 import { Worker } from 'worker_threads';
 import { v4 as uuidv4 } from 'uuid';
 
-import {
-  DeleteRequest,
-  DownloadRequest,
-  FileData,
-  MulterFile,
-  RenameRequest,
-  TransformRequest,
-  Vector3,
-} from '../utils/types';
+import { DeleteRequest, DownloadRequest, FileData, RenameRequest, TransformRequest, Vector3 } from '../utils/types';
 import {
   checkFileExists,
   constructFileNameOnUpload,
   fileCleanup,
+  parseJSONOrDefault,
   readFileData,
   workerCleanup,
   writeFileData,
 } from '../utils';
-import { access } from 'fs/promises';
 
 //-----------------------------------------------------------------------------
 
@@ -236,8 +228,8 @@ export const transformFile = async (req: TransformRequest, res: Response, next: 
     return res.status(400).json({ error: 'File Id  in the request' });
   }
 
-  let scale_vector: Vector3 = req.query.scale ? JSON.parse(req.query.scale) : { x: 1, y: 1, z: 1 };
-  let offset_vector: Vector3 = req.query.offset ? JSON.parse(req.query.offset) : { x: 0, y: 0, z: 0 };
+  let scale_vector: Vector3 = parseJSONOrDefault(req.query.scale, { x: 1, y: 1, z: 1 });
+  let offset_vector: Vector3 = parseJSONOrDefault(req.query.offset, { x: 0, y: 0, z: 0 });
 
   try {
     const files: FileData[] = await readFileData();
@@ -258,10 +250,11 @@ export const transformFile = async (req: TransformRequest, res: Response, next: 
       },
     });
 
+    console.log(worker.threadId);
+
     let isFirstMessage = true;
 
-    // client closes connection
-    res.on('close', () => workerCleanup(worker));
+    // TODO: Handle edge cases => worker cleanups
 
     worker.on('message', chunk => {
       if (isFirstMessage) {
@@ -271,10 +264,18 @@ export const transformFile = async (req: TransformRequest, res: Response, next: 
         isFirstMessage = false;
       }
 
-      // TODO: Handle case if write doesnt happen on a chunk => response buffer is full
+      // Backpressuring to sync worker flow with processing speed
+      // write doesnt happen on a chunk => response buffer is full
       // Drain the response, pause worker and resume worker after response buffer is empty
-
-      res.write(chunk);
+      if (chunk !== null && !res.write(chunk)) {
+        worker.postMessage({ type: 'pause' });
+        res.once('drain', () => {
+          worker.postMessage({ type: 'resume' });
+        });
+      } else if (chunk === null) {
+        // no more data to be sent => download complete
+        res.end();
+      }
     });
 
     worker.on('error', err => {

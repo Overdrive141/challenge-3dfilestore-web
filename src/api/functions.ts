@@ -15,7 +15,7 @@ type Vector3 = {
   z: number;
 };
 
-const API_URL = 'http://10.0.0.144:3333/v1';
+const API_URL = 'http://localhost:3333/v1';
 const apiClient = axios.create({ baseURL: API_URL });
 
 //-----------------------------------------------------------------------------

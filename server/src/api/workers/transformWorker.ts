@@ -1,9 +1,8 @@
 import fs from 'fs';
-import process from 'process';
 import * as readline from 'readline';
-
 import { parentPort, workerData, isMainThread } from 'worker_threads';
-import { Vector3 } from '../utils/types';
+
+import { MessageFromMainThread, Vector3 } from '../utils/types';
 
 interface WorkerData {
   filePath: string;
@@ -20,15 +19,14 @@ if (!isMainThread) {
   const data = workerData as WorkerData;
   const { filePath, scale_vector, offset_vector } = data;
 
+  const readStream = fs.createReadStream(filePath);
+
   const readInterface = readline.createInterface({
-    input: fs.createReadStream(filePath),
-    // output: process.stdout,
-    //   output: process.stdout,
-    //   console: false,
+    input: readStream,
   });
 
   // To support concurrent requests, fill buffer before sending to main thread and returning to user.
-  // 10mb mem buffer
+  // 10mb mem buffer - can optimize further
   let buffer = '';
   const maxBufferSize = 10 * 1024 * 1024;
 
@@ -36,14 +34,12 @@ if (!isMainThread) {
     if (line.startsWith('v ')) {
       // check if line is a vertex
       // apply transformation
-      // const vertex: Vector3 = {x: pa}
-      // filter out the "v " => split into array => filter out array to remove empty strings => parse to ints
       const vertex: number[] = line.slice(2).split(' ').filter(Boolean).map(Number);
       let newVertex: number[] = [];
       newVertex[0] = vertex[0] * scale_vector.x + offset_vector.x;
       newVertex[1] = vertex[1] * scale_vector.y + offset_vector.y;
       newVertex[2] = vertex[2] * scale_vector.z + offset_vector.z;
-      // console.log(newVertex);
+
       buffer += `v ${newVertex.join(' ')}\n`;
     } else {
       // line is not a vertex, keep it as is
@@ -51,10 +47,8 @@ if (!isMainThread) {
     }
 
     if (buffer.length > maxBufferSize) {
-      if (parentPort) {
-        parentPort?.postMessage(buffer);
-        buffer = '';
-      }
+      parentPort?.postMessage(buffer);
+      buffer = '';
     }
   });
 
@@ -62,10 +56,22 @@ if (!isMainThread) {
     // Once reading is done, post any remaining buffer content to the parent thread
     if (buffer.length > 0) {
       parentPort?.postMessage(buffer);
-      console.log('Buffer boy');
+    }
+
+    // console.log('Worker Ended');
+    parentPort?.postMessage(null); // data ended
+  });
+
+  parentPort?.on('message', (msg: MessageFromMainThread) => {
+    if (msg.type === 'pause') {
+      readStream.pause();
+    } else if (msg.type === 'resume') {
+      // Resume the read stream
+      readStream.resume();
     }
   });
 
+  /** 
   readInterface.on('pause', () => {
     console.log('Paused Event is invoked');
   });
@@ -73,4 +79,5 @@ if (!isMainThread) {
   readInterface.on('resume', () => {
     console.log('Resume Event is invoked.');
   });
+  */
 }

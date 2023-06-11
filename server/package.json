@@ -5,9 +5,9 @@
   "main": "index.ts",
   "scripts": {
     "build": "npx tsc",
-    "start": "NODE_OPTIONS=--max_old_space_size=512 node dist/index.js",
-    "debug": "NODE_OPTIONS=\"--inspect --max_old_space_size=512\" node dist/index.js",
-    "dev": "concurrently \"npx tsc --watch\" \"NODE_OPTIONS=--max_old_space_size=512 nodemon -q dist/index.js\""
+    "start": "NODE_OPTIONS=--max-old-space-size=512 node dist/index.js",
+    "debug": "NODE_OPTIONS=\"--inspect --max-old-space-size=512\" node dist/index.js",
+    "dev": "concurrently \"npx tsc --watch\" \"NODE_OPTIONS=--max-old-space-size=512 nodemon -q dist/index.js\""
   },
   "keywords": [],
   "author": "",

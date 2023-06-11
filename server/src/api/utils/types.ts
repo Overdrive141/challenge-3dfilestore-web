@@ -1,5 +1,4 @@
 import { Request } from 'express';
-import { Multer } from 'multer';
 
 export interface MulterFile {
   originalname: string;
@@ -20,6 +19,8 @@ export type Vector3 = {
   y: number;
   z: number;
 };
+
+export type MessageFromMainThread = { type: 'pause' } | { type: 'resume' };
 
 /////////////////////////
 
