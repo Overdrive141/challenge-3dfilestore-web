@@ -12,14 +12,25 @@ import {
   TransformRequest,
   Vector3,
 } from '../utils/types';
-import { checkFileExists, constructFileNameOnUpload, fileCleanup, readFileData, writeFileData } from '../utils';
+import {
+  checkFileExists,
+  constructFileNameOnUpload,
+  fileCleanup,
+  readFileData,
+  workerCleanup,
+  writeFileData,
+} from '../utils';
 import { access } from 'fs/promises';
 
 //-----------------------------------------------------------------------------
 
 // TODO: Handle race conditions for updating files.json metadata when
 //       multiple clients upload file, rename file or delete file.
-//       Implement queue management using Kafka
+
+// TODO: Implement queue management using Kafka or Async Queue for uploads & downloads - handle only a number of uploads/downloads/transforms at a time
+//       Push all incoming requests into queue once server's limit is reached
+
+// TODO: Implement rate limiting to not flood server with requests from same client
 
 export const uploadFile = async (req: Request, res: Response, next: express.NextFunction) => {
   if (!req.file) {
@@ -249,6 +260,9 @@ export const transformFile = async (req: TransformRequest, res: Response, next: 
 
     let isFirstMessage = true;
 
+    // client closes connection
+    res.on('close', () => workerCleanup(worker));
+
     worker.on('message', chunk => {
       if (isFirstMessage) {
         // telling client that this is a downloadable file only on first msg from worker
@@ -256,15 +270,21 @@ export const transformFile = async (req: TransformRequest, res: Response, next: 
         res.setHeader('Content-Disposition', `attachment; filename=transformed-${file.name}`);
         isFirstMessage = false;
       }
+
+      // TODO: Handle case if write doesnt happen on a chunk => response buffer is full
+      // Drain the response, pause worker and resume worker after response buffer is empty
+
       res.write(chunk);
     });
 
     worker.on('error', err => {
       console.error('Worker error', err);
+      workerCleanup(worker);
       return res.status(500).send({ error: `An error occurred while processing the request. ${err}` });
     });
 
     worker.on('exit', () => {
+      workerCleanup(worker);
       res.end();
     });
   } catch (err) {

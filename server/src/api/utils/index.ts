@@ -3,10 +3,13 @@ import fs from 'fs';
 import path from 'path';
 import { uploadDir } from '../../config/vars';
 import { FileData } from './types';
+import { Worker } from 'worker_threads';
 
 type FileCounts = {
   [key: string]: number;
 };
+
+//------------------------- File Utilities  -------------------------------------------
 
 export const constructFileNameOnUpload = (files: FileData[], newFileName: string): string => {
   const fileCounts: FileCounts = Array.from(files.values()).reduce((counts: FileCounts, file: FileData) => {
@@ -31,19 +34,19 @@ export const constructFileNameOnUpload = (files: FileData[], newFileName: string
   return `${newFileBaseName}(${fileCounts[newFileName] + 1}).${newFileExtension}`;
 };
 
-// function to read file metadata
+//-------------function to read file metadata----------------
 export const readFileData = async (): Promise<FileData[]> => {
   const rawData: string = await readFile(path.join(uploadDir, 'files.json'), 'utf8');
   const fileData: FileData[] = JSON.parse(rawData);
   return fileData;
 };
 
-// function to write file metadata
+//------------function to write file metadata-----------------
 export const writeFileData = async (fileData: FileData[]): Promise<void> => {
   await writeFile(path.join(uploadDir, 'files.json'), JSON.stringify(fileData, null, 2), 'utf-8');
 };
 
-// memory cleanup
+//--------------memory cleanup---------------------------------
 export const fileCleanup = (readStream: fs.ReadStream): void => {
   // Cleaning up readStream & all listeners if still reading/readable
   if (!readStream.destroyed) {
@@ -52,7 +55,8 @@ export const fileCleanup = (readStream: fs.ReadStream): void => {
   }
 };
 
-// does file exists on disk
+//-------------does file exists on disk-------------------------
+//
 export const checkFileExists = async (filePath: string): Promise<void> => {
   try {
     // TODO: Check for read access
@@ -62,7 +66,16 @@ export const checkFileExists = async (filePath: string): Promise<void> => {
   }
 };
 
-///////////////////////////////////////////
+//------------------------- Worker Utilities ---------------------------------------------
+
+export const workerCleanup = (worker?: Worker) => {
+  if (worker) {
+    worker.removeAllListeners();
+    worker.terminate();
+  }
+};
+
+//-----------------------------------------------------------------------------
 
 export const preserveExtension = (fileName: string): void => {
   // TODO: Handle extension preservation on rename
